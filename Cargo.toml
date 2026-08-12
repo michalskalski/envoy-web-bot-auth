@@ -1,0 +1,14 @@
+[package]
+name = "envoy-web-bot-auth"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "envoy_web_bot_auth"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+envoy-proxy-dynamic-modules-rust-sdk = {
+    git = "https://github.com/envoyproxy/envoy",
+    rev = "0ebfcfe5b0484b89ca85b761da9e05ce75dbda8d",
+}
