@@ -41,8 +41,9 @@ static_resources:
                       filter_name: web-bot-auth
 
                       filter_config:
-                        "@type": type.googleapis.com/google.protobuf.StringValue
-                        value: ""
+                        "@type": type.googleapis.com/google.protobuf.Struct
+                        value:
+                          response_header_value: hello-from-config
 
                   - name: envoy.filters.http.router
                     typed_config:
