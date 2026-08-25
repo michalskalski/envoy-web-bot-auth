@@ -14,4 +14,5 @@ envoy-proxy-dynamic-modules-rust-sdk = {
 }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sfv = "0.13.0"
 web-bot-auth = "=0.7.0"

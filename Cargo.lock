@@ -232,6 +232,7 @@ dependencies = [
  "envoy-proxy-dynamic-modules-rust-sdk",
  "serde",
  "serde_json",
+ "sfv",
  "web-bot-auth",
 ]
 
