@@ -24,6 +24,9 @@
         packages = [
           rustToolchain
           pkgs.llvmPackages.libclang
+          pkgs.kind
+          pkgs.kubernetes-helm
+          pkgs.kubectl
         ];
 
         LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";

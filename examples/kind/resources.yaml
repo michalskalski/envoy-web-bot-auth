@@ -1,0 +1,113 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: web-bot-auth
+  namespace: default
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          image: envoy-web-bot-auth:dev
+  dynamicModules:
+    - name: envoy-web-bot-auth
+      source:
+        type: Local
+        local:
+          path: /etc/envoy/dynamic-modules/libenvoy_web_bot_auth.so
+      doNotClose: true
+      loadGlobally: false
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: web-bot-auth
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: web-bot-auth
+  namespace: default
+spec:
+  gatewayClassName: web-bot-auth
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: web-bot-auth
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: default
+spec:
+  selector:
+    app: echo
+  ports:
+    - name: http
+      port: 5678
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:1.0.0
+          args: ["-listen=:5678", "-text=hello from test backend"]
+          ports:
+            - name: http
+              containerPort: 5678
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: web-bot-auth
+  namespace: default
+spec:
+  parentRefs:
+    - name: web-bot-auth
+      sectionName: http
+  rules:
+    - backendRefs:
+        - name: echo
+          port: 5678
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: web-bot-auth
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web-bot-auth
+  dynamicModule:
+    - name: envoy-web-bot-auth
+      filterName: web-bot-auth
+      config:
+        response_header_value: hello-from-web-bot-auth
