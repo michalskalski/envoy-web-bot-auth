@@ -1,4 +1,4 @@
-// Required by the factory-registration macro in the Envoy 1.38.3 SDK.
+// Required by the factory-registration macro in the Envoy SDK.
 #![allow(unpredictable_function_pointer_comparisons)]
 
 mod config;
@@ -6,8 +6,8 @@ mod config;
 use config::Settings;
 use envoy_proxy_dynamic_modules_rust_sdk::EnvoyBuffer;
 use envoy_proxy_dynamic_modules_rust_sdk::{
-    EnvoyHttpFilter, EnvoyHttpFilterConfig, HttpFilter, HttpFilterConfig, abi,
-    declare_init_functions, envoy_log_error, envoy_log_info,
+    abi, declare_init_functions, envoy_log_error, envoy_log_info, EnvoyHttpFilter,
+    EnvoyHttpFilterConfig, HttpFilter, HttpFilterConfig,
 };
 use sfv::SerializeValue;
 use std::sync::Arc;
@@ -379,7 +379,7 @@ mod tests {
     fn retrieves_a_selected_signature_agent_dictionary_member() {
         let request = RequestComponents {
             signature_agent: vec![
-                r#"sig1="https://one.example", sig2="https://two.example""#.into(),
+                r#"sig1="https://one.example", sig2="https://two.example""#.into()
             ],
             ..RequestComponents::from_pseudo_headers("GET", "example.test", "/")
         };

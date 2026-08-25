@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 envoy-proxy-dynamic-modules-rust-sdk = {
     git = "https://github.com/envoyproxy/envoy",
-    rev = "0ebfcfe5b0484b89ca85b761da9e05ce75dbda8d",
+    rev = "8eea3285d6bdb89f8ea34632cfe7ce1608a8f374",
 }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
