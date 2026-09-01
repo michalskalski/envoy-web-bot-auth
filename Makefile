@@ -242,7 +242,7 @@ release-verify: test manifest-check check-release-tools release-manifest ## Run 
 
 cluster: check-tools ## Create the local kind cluster if it does not already exist.
 	@mkdir --parents '$(dir $(KIND_KUBECONFIG))'
-	@if kind get clusters | rg --fixed-strings --quiet --line-regexp '$(CLUSTER_NAME)'; then \
+	@if kind get clusters | grep -Fxq '$(CLUSTER_NAME)'; then \
 		echo "kind cluster $(CLUSTER_NAME) already exists"; \
 		kind export kubeconfig --name '$(CLUSTER_NAME)' --kubeconfig '$(KIND_KUBECONFIG)'; \
 	else \
