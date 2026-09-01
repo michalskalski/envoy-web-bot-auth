@@ -35,6 +35,25 @@ a normalized identifier with an Ed25519 JWK or authoritative key absence. The
 module recomputes the identifier and thumbprint and verifies the signature before
 emitting trusted headers.
 
+```text
+Client request
+  |  Signature-Agent, Signature-Input, Signature
+  v
+Envoy + Web Bot Auth module
+  |  remove identity headers supplied by the caller and parse signed fields
+  v  local resolver callout (Unix socket or loopback TCP)
+Resolver sidecar
+  |  cache, then bounded HTTPS discovery when needed
+  v
+Public key discovery endpoint
+  |  Ed25519 JWK or authoritative key absence
+  v
+Envoy module
+  |  recompute identifier and thumbprint and verify signature
+  +-- verified --------------------> upstream request + trusted identity metadata
+  `-- absent, invalid, unavailable -> admission-mode policy result
+```
+
 Resolver response errors, callout ID mismatch, identifier mismatch, thumbprint
 mismatch, and unusable keys are unavailable results. They never create identity
 metadata.
@@ -99,10 +118,3 @@ graceful shutdown.
 The Kubernetes base uses a resolver sidecar, a shared `emptyDir`, UID and GID
 65532, `fsGroup: 65532`, and an Envoy pipe cluster. The required overlay adds
 readiness gating. Kubernetes 1.34 uses the init container compatibility path.
-
-## Release artifacts
-
-Release verification creates architecture specific module and resolver archives,
-OCI archives, SBOMs, checksums, compatibility metadata, and a release manifest.
-It checks archive contents, ELF architecture, module symbols, static resolver
-linkage, and loading the module in the pinned Envoy runtime.
