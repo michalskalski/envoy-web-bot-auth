@@ -1,0 +1,12 @@
+# Versions that must move together when the Envoy Gateway integration changes.
+envoy_gateway = "v1.9.1"
+envoy_runtime = "distroless-v1.39.1"
+envoy_runtime_digest = "sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4"
+envoy_sdk_revision = "b579d07d3ad7ee11d32b105e91a5a39ad24718d7"
+protocol_revision = "draft-02"
+protocol_published = "2026-08-18"
+rust_toolchain = "1.97.1"
+module_target = "x86_64-unknown-linux-gnu"
+resolver_target = "x86_64-unknown-linux-musl"
+kubernetes_image_volume_minimum = "1.35"
+kubernetes_init_container_fallback = "1.34"

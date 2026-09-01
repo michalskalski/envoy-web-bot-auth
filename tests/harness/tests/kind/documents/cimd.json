@@ -1,0 +1,4 @@
+{
+  "client_id": "https://fixture.web-bot-auth.test/",
+  "jwks_uri": "https://fixture.web-bot-auth.test/jwks"
+}

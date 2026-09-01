@@ -1,0 +1,8 @@
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "d": "Bm1a-w0IGXnWDAIgXhPubykyuhMZah6qc83Fwoo3QUs",
+  "x": "HeASB7bZRkoeg6vmjyELll2w181pbxHrCaCjIoBWtdo",
+  "use": "test-only",
+  "comment": "Dedicated deterministic kind fixture key. Never use outside tests."
+}

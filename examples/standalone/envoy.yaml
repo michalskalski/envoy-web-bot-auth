@@ -1,4 +1,17 @@
 static_resources:
+  clusters:
+    - name: web-bot-auth-key-resolver
+      connect_timeout: 2s
+      type: STATIC
+      load_assignment:
+        cluster_name: web-bot-auth-key-resolver
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 8081
   listeners:
     - name: hello-world
       address:
@@ -43,7 +56,15 @@ static_resources:
                       filter_config:
                         "@type": type.googleapis.com/google.protobuf.Struct
                         value:
-                          response_header_value: hello-from-config
+                          mode: observe
+                          resolver:
+                            cluster: web-bot-auth-key-resolver
+                            timeout_ms: 2000
+                          max_signature_lifetime_seconds: 86400
+                          clock_skew_seconds: 5
+                          required_components: []
+                          accept_legacy_signature_agent: false
+                          forward_identity_headers: true
 
                   - name: envoy.filters.http.router
                     typed_config:

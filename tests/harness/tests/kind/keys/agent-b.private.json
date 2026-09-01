@@ -1,0 +1,8 @@
+{
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "d": "VGeQmboVh7r6KZuSQyWQmbqpjv_j6giJUSUhFjZ1AMY",
+  "x": "BPGSJ5ZwWg-DHPYthdEJqbGMINULnW91nGkytUXlW4s",
+  "use": "test-only",
+  "comment": "Replacement key for deterministic rotation scenarios. Never use outside tests."
+}

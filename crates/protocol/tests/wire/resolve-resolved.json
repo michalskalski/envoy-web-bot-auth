@@ -1,0 +1,1 @@
+{"result":"resolved","normalized_identifier":"https://agent.example/keys","jwk":{"kty":"OKP","crv":"Ed25519","x":"TEST_X"}}

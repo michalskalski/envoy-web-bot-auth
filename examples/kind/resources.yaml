@@ -4,12 +4,99 @@ metadata:
   name: web-bot-auth
   namespace: default
 spec:
+  filterOrder:
+    - name: envoy.filters.http.dynamic_modules
+      before: envoy.filters.http.rbac
+  bootstrap:
+    type: JSONPatch
+    jsonPatches:
+      - op: add
+        path: /static_resources/clusters/-
+        value:
+          name: web-bot-auth-key-resolver
+          connect_timeout: 2s
+          type: STATIC
+          load_assignment:
+            cluster_name: web-bot-auth-key-resolver
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        pipe:
+                          path: /run/wba/resolver.sock
   provider:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
+        pod:
+          volumes:
+            - name: web-bot-auth-module
+              image:
+                reference: envoy-web-bot-auth-module:dev
+                pullPolicy: Never
+            - name: web-bot-auth-runtime
+              emptyDir: {}
         container:
-          image: envoy-web-bot-auth:dev
+          image: envoyproxy/envoy:distroless-v1.39.1@sha256:eb2c01c13125d1629637cb4e4cce7207009fb7cc2c8027f9742758549d15b6f4
+          volumeMounts:
+            - name: web-bot-auth-module
+              mountPath: /etc/envoy/dynamic-modules
+              readOnly: true
+            - name: web-bot-auth-runtime
+              mountPath: /run/wba
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              template:
+                spec:
+                  securityContext:
+                    fsGroup: 65532
+                    fsGroupChangePolicy: OnRootMismatch
+                  containers:
+                    - name: web-bot-auth-resolver
+                      image: envoy-web-bot-auth-resolver:dev
+                      imagePullPolicy: Never
+                      args:
+                        - serve
+                        - --listen=unix:///run/wba/resolver.sock
+                        - --egress-mode=direct
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        capabilities:
+                          drop: ["ALL"]
+                        readOnlyRootFilesystem: true
+                        runAsNonRoot: true
+                        runAsUser: 65532
+                        runAsGroup: 65532
+                      volumeMounts:
+                        - name: web-bot-auth-runtime
+                          mountPath: /run/wba
+                      startupProbe:
+                        exec:
+                          command:
+                            - /web-bot-auth-resolver
+                            - probe
+                            - --socket=/run/wba/resolver.sock
+                            - --timeout-ms=250
+                        periodSeconds: 1
+                        failureThreshold: 10
+                      livenessProbe:
+                        exec:
+                          command:
+                            - /web-bot-auth-resolver
+                            - probe
+                            - --socket=/run/wba/resolver.sock
+                            - --timeout-ms=250
+                        periodSeconds: 10
+                        timeoutSeconds: 1
+                        failureThreshold: 3
+                      resources:
+                        requests:
+                          cpu: 10m
+                          memory: 16Mi
+                        limits:
+                          memory: 64Mi
   dynamicModules:
     - name: envoy-web-bot-auth
       source:
@@ -59,6 +146,21 @@ spec:
       port: 5678
       targetPort: http
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: header-echo-nginx
+  namespace: default
+data:
+  default.conf: |
+    server {
+      listen 5678;
+      default_type application/json;
+      location / {
+        return 200 '{"status":"$http_x_web_bot_auth_status","identity":"$http_x_web_bot_auth_identity","key_id":"$http_x_web_bot_auth_keyid"}';
+      }
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -76,11 +178,19 @@ spec:
     spec:
       containers:
         - name: echo
-          image: hashicorp/http-echo:1.0.0
-          args: ["-listen=:5678", "-text=hello from test backend"]
+          image: nginx:1.27-alpine
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 5678
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: header-echo-nginx
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -110,4 +220,12 @@ spec:
     - name: envoy-web-bot-auth
       filterName: web-bot-auth
       config:
-        response_header_value: hello-from-web-bot-auth
+        mode: observe
+        resolver:
+          cluster: web-bot-auth-key-resolver
+          timeout_ms: 2000
+        max_signature_lifetime_seconds: 86400
+        clock_skew_seconds: 5
+        required_components: []
+        accept_legacy_signature_agent: false
+        forward_identity_headers: true

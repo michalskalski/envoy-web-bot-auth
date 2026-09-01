@@ -1,0 +1,42 @@
+[package]
+name = "web-bot-auth-resolver"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Bounded Web Bot Auth discovery resolver sidecar"
+publish = false
+
+[features]
+default = []
+# Only deterministic kind scenarios enable this in a dedicated image.
+kind-fixtures = []
+
+[[bin]]
+name = "web-bot-auth-resolver"
+path = "src/bin/main.rs"
+
+[dependencies]
+async-trait = "0.1"
+axum = "0.8"
+clap = { version = "4.6", features = ["derive"] }
+futures-util = "=0.3.33"
+governor = "0.10"
+http = "1.3"
+http-cache-semantics = "3.0"
+httpdate = "1.0"
+ipnet = "2.12"
+moka = { version = "0.12", features = ["future"] }
+reqwest = { version = "0.12", default-features = false, features = ["http2", "json", "rustls-tls-native-roots", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.47", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+url = "2.5"
+web-bot-auth-protocol.workspace = true
+
+[dev-dependencies]
+rcgen = "0.13"
+rustls = "0.23"
+tokio-rustls = "0.26"
+tower = "0.5"

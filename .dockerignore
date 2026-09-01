@@ -1,3 +1,7 @@
 .git
 .direnv
+.kind
+*.kubeconfig
+**/*.kubeconfig
 target
+dist

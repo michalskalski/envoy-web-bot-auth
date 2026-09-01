@@ -1,0 +1,7 @@
+# Composition resources are isolated from the base route. The suite applies
+# one rate-limit policy variant at a time.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../overlays/fixtures
+  - routes.yaml

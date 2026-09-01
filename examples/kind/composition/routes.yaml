@@ -1,0 +1,106 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: web-bot-auth-composition-auth
+  namespace: default
+spec:
+  parentRefs:
+    - name: web-bot-auth
+      sectionName: http
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /composition/auth
+      backendRefs:
+        - name: echo
+          port: 5678
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: web-bot-auth-composition-quota
+  namespace: default
+spec:
+  parentRefs:
+    - name: web-bot-auth
+      sectionName: http
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /composition/quota
+      backendRefs:
+        - name: echo
+          port: 5678
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: web-bot-auth-composition-auth
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web-bot-auth-composition-auth
+  dynamicModule:
+    - name: envoy-web-bot-auth
+      filterName: web-bot-auth
+      config:
+        mode: observe
+        resolver:
+          cluster: web-bot-auth-key-resolver
+          timeout_ms: 2000
+        max_signature_lifetime_seconds: 86400
+        clock_skew_seconds: 5
+        required_components: []
+        accept_legacy_signature_agent: false
+        forward_identity_headers: true
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: web-bot-auth-composition-quota
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web-bot-auth-composition-quota
+  dynamicModule:
+    - name: envoy-web-bot-auth
+      filterName: web-bot-auth
+      config:
+        mode: observe
+        resolver:
+          cluster: web-bot-auth-key-resolver
+          timeout_ms: 2000
+        max_signature_lifetime_seconds: 86400
+        clock_skew_seconds: 5
+        required_components: []
+        accept_legacy_signature_agent: false
+        forward_identity_headers: true
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: web-bot-auth-composition-auth
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web-bot-auth-composition-auth
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: verified-agent-a
+        action: Allow
+        principal:
+          headers:
+            - name: x-web-bot-auth-status
+              values: [verified]
+            - name: x-web-bot-auth-identity
+              values:
+                - https://fixture.web-bot-auth.test/.well-known/http-message-signatures-directory

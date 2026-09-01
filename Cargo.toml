@@ -1,18 +1,23 @@
-[package]
-name = "envoy-web-bot-auth"
+[workspace]
+resolver = "2"
+members = [
+    "crates/protocol",
+    "crates/module",
+    "crates/resolver",
+    "tests/harness",
+]
+default-members = [
+    "crates/protocol",
+    "crates/module",
+    "crates/resolver",
+]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.97.1"
+license = "Apache-2.0"
+repository = "https://github.com/michalskalski/envoy-web-bot-auth"
 
-[lib]
-name = "envoy_web_bot_auth"
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-envoy-proxy-dynamic-modules-rust-sdk = {
-    git = "https://github.com/envoyproxy/envoy",
-    rev = "8eea3285d6bdb89f8ea34632cfe7ce1608a8f374",
-}
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sfv = "0.13.0"
-web-bot-auth = "=0.7.0"
+[workspace.dependencies]
+web-bot-auth-protocol = { path = "crates/protocol", version = "0.1.0" }

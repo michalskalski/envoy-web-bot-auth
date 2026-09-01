@@ -1,0 +1,36 @@
+# Compatibility loading path for Kubernetes versions before image volumes.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../required
+patches:
+  - target:
+      group: gateway.envoyproxy.io
+      version: v1alpha1
+      kind: EnvoyProxy
+      name: web-bot-auth
+    patch: |-
+      - op: remove
+        path: /spec/provider/kubernetes/envoyDeployment/pod/volumes/0
+      - op: add
+        path: /spec/provider/kubernetes/envoyDeployment/pod/volumes/0
+        value:
+          name: web-bot-auth-module
+          emptyDir: {}
+      - op: add
+        path: /spec/provider/kubernetes/envoyDeployment/patch/value/spec/template/spec/initContainers
+        value:
+          - name: web-bot-auth-module-installer
+            image: envoy-web-bot-auth-module-installer:dev
+            imagePullPolicy: Never
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 65532
+              runAsGroup: 65532
+            volumeMounts:
+              - name: web-bot-auth-module
+                mountPath: /work

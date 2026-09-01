@@ -1,0 +1,15 @@
+# Optional mode with deterministic discovery fixtures.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../fixtures
+patches:
+  - target:
+      group: gateway.envoyproxy.io
+      version: v1alpha1
+      kind: EnvoyExtensionPolicy
+      name: web-bot-auth
+    patch: |-
+      - op: replace
+        path: /spec/dynamicModule/0/config/mode
+        value: optional

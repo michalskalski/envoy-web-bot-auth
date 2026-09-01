@@ -1,0 +1,43 @@
+# These policies assume the dynamic-module filter order configured in
+# resources.yaml. Never deploy them on an Envoy path that clients can bypass.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: allow-example-agent
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web-bot-auth
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: verified-example-agent
+        action: Allow
+        principal:
+          headers:
+            - name: x-web-bot-auth-status
+              values: [verified]
+            - name: x-web-bot-auth-identity
+              values:
+                - https://agent.example/.well-known/http-message-signatures-directory
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: rate-limit-web-bot-identity
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web-bot-auth
+  rateLimit:
+    local:
+      rules:
+        # Local limits are per Envoy proxy. Envoy Gateway does not support
+        # distinct header matching for this scope.
+        - limit:
+            requests: 60
+            unit: Minute

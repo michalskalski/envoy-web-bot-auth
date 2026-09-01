@@ -1,0 +1,48 @@
+[graph]
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-unknown-linux-musl" },
+    { triple = "aarch64-unknown-linux-gnu" },
+    { triple = "aarch64-unknown-linux-musl" },
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+unmaintained = "all"
+ignore = []
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+    "Apache-2.0",
+    "MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    # ICU4X declares Unicode-3.0 and ships the license text in each crate.
+    # https://github.com/unicode-org/icu4x/blob/main/LICENSE
+    "Unicode-3.0",
+    # webpki-roots ships the complete CDLA text with its Mozilla root data.
+    # https://cdla.dev/permissive-2-0/
+    "CDLA-Permissive-2.0",
+    "Zlib",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# All current workspace crates are private. Their path and pinned Git inputs
+# are intentional. Version wildcards remain denied.
+allow-wildcard-paths = true
+
+[bans.workspace-dependencies]
+# Inherited entries are resolved by Cargo from the workspace table.
+# Do not weaken the wildcard check for ordinary dependency declarations.
+duplicates = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = ["https://github.com/envoyproxy/envoy"]
