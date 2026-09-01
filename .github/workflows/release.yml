@@ -29,7 +29,7 @@ jobs:
         with:
           cluster_name: envoy-web-bot-auth-release
           node_image: kindest/node:v1.35.0
-      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
       - uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e7feb7f # v4.0.0
       - uses: anchore/sbom-action/download-syft@e11c554f704a0b820cbf8c51673f6945e0731532 # v0.20.0
       - run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes skopeo jq
