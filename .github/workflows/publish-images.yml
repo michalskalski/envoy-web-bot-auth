@@ -44,12 +44,6 @@ jobs:
           cd dist
           grep --extended-regexp '  (module|module-installer|resolver)\.oci\.tar$' SHA256SUMS \
             | sha256sum --check
-      - name: Log in to GitHub Container Registry for attestations
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v3.6.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
       - name: Log in to GitHub Container Registry
         env:
           SKOPEO_TOKEN: ${{ github.token }}
@@ -74,19 +68,16 @@ jobs:
         with:
           subject-name: ${{ env.RESOLVER_IMAGE }}
           subject-digest: ${{ steps.push.outputs.resolver_digest }}
-          push-to-registry: true
       - name: Attest module image provenance
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-name: ${{ env.MODULE_IMAGE }}
           subject-digest: ${{ steps.push.outputs.module_digest }}
-          push-to-registry: true
       - name: Attest module installer image provenance
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
         with:
           subject-name: ${{ env.MODULE_INSTALLER_IMAGE }}
           subject-digest: ${{ steps.push.outputs.module_installer_digest }}
-          push-to-registry: true
       - name: Add image digests to release notes
         env:
           GH_TOKEN: ${{ github.token }}
