@@ -44,6 +44,12 @@ jobs:
           cd dist
           grep --extended-regexp '  (module|module-installer|resolver)\.oci\.tar$' SHA256SUMS \
             | sha256sum --check
+      - name: Log in to GitHub Container Registry for attestations
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v3.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
       - name: Log in to GitHub Container Registry
         env:
           SKOPEO_TOKEN: ${{ github.token }}
