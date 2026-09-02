@@ -388,13 +388,15 @@ fn deployment_is_ready(document: &serde_json::Value, expected_replicas: Option<u
     let replicas = document
         .get("status")
         .and_then(|status| status.get("replicas"))
-        .and_then(serde_json::Value::as_u64);
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_default();
     let updated_replicas = document
         .get("status")
         .and_then(|status| status.get("updatedReplicas"))
-        .and_then(serde_json::Value::as_u64);
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or_default();
 
-    if replicas != Some(desired_replicas) || updated_replicas != Some(desired_replicas) {
+    if replicas != desired_replicas || updated_replicas != desired_replicas {
         return false;
     }
 
@@ -1421,5 +1423,18 @@ mod tests {
         assert!(deployment_is_ready(&deployment(4, 4, 1, 1), Some(1)));
         assert!(!deployment_is_ready(&deployment(4, 4, 2, 2), Some(1)));
         assert!(!deployment_is_ready(&deployment(4, 3, 1, 1), Some(1)));
+    }
+
+    #[test]
+    fn zero_scale_accepts_omitted_status_counts() {
+        let mut document = deployment(4, 4, 0, 0);
+        let status = document["status"]
+            .as_object_mut()
+            .expect("test deployment status is an object");
+        status.remove("replicas");
+        status.remove("updatedReplicas");
+        status.remove("availableReplicas");
+
+        assert!(deployment_is_ready(&document, Some(0)));
     }
 }
