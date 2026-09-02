@@ -3,6 +3,7 @@ SHELL := /usr/bin/env bash
 CLUSTER_NAME ?= envoy-web-bot-auth
 KIND_NODE_IMAGE ?=
 KIND_KUBECONFIG ?= $(CURDIR)/.kind/$(CLUSTER_NAME).kubeconfig
+export KIND_KUBECONFIG
 MODULE_IMAGE ?= envoy-web-bot-auth-module:dev
 RESOLVER_IMAGE ?= envoy-web-bot-auth-resolver:dev
 FIXTURE_RESOLVER_IMAGE ?= envoy-web-bot-auth-resolver-fixtures:dev

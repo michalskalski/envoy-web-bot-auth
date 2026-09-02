@@ -41,6 +41,7 @@ jobs:
       - name: Run the release commit's Kind suite
         env:
           CLUSTER_NAME: envoy-web-bot-auth-release
+          KIND_KUBECONFIG: ${{ github.workspace }}/.kind/envoy-web-bot-auth-release.kubeconfig
         run: make kind-test
       - run: make release-verify
       - if: always()
