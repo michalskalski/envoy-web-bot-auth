@@ -16,9 +16,9 @@ pub(crate) struct Draft02Candidate {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum CandidateError {
     Malformed,
-    /// Draft 02 permits multiple Web Bot Auth signatures. Version 1 supports
-    /// one because the dependency selects one label, the filter tracks one
-    /// resolver call, and the trusted output represents one identity.
+    /// Draft 02 permits multiple Web Bot Auth signatures. This module currently
+    /// supports exactly one: the dependency selects one label, the filter tracks
+    /// one resolver call, and the trusted output represents one identity.
     MultipleSignatures,
     MissingSignatureAgent,
     SignatureAgentNotBound,

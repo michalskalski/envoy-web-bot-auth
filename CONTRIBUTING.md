@@ -72,3 +72,7 @@ release artifacts, emits Syft SPDX documents for each architecture for the
 module, module installer, and resolver, checks embedded Cargo dependency data,
 and records immutable digests. It needs Docker Buildx, Syft, Skopeo, and jq.
 The Nix shell provides these tools.
+
+Publishing the GitHub Release triggers a separate workflow that copies the
+verified module, resolver, and module-installer OCI archives to GitHub Container
+Registry and attaches build-provenance attestations.

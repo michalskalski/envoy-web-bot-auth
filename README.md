@@ -6,7 +6,7 @@ It verifies signed automated requests at the gateway, resolves public
 verification keys, and makes a trusted caller identity available to later Envoy
 policy.
 
-Use it when an origin needs to identify an automated caller before applying its
+Use it when a target service needs to identify an automated caller before applying its
 own access policy. A verified identity is an authentication input. It does not
 grant authorization, express reputation, or provide replay protection.
 
@@ -68,6 +68,6 @@ make manifest-check
 make release-verify
 ```
 
-`nix develop` provides the required client tools. Docker access is still a host
-requirement. [CONTRIBUTING.md](CONTRIBUTING.md) describes the contributor and
+`nix develop` provides the required client tools.
+[CONTRIBUTING.md](CONTRIBUTING.md) describes the contributor and
 release workflow.

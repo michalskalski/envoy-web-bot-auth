@@ -10,8 +10,42 @@ Use an Envoy Gateway and Envoy runtime combination recorded in
 [`compatibility.toml`](../compatibility.toml). The normal deployment uses
 Kubernetes image volumes. Kubernetes 1.34 uses the init container overlay.
 
-Build the module and resolver images, then tag and push them to a registry that
-your cluster can pull from:
+## Official release images
+
+After a GitHub Release is published, its three production OCI artifacts are
+available from GitHub Container Registry. The release notes list their immutable
+digests and build-provenance attestations:
+
+```text
+ghcr.io/michalskalski/envoy-web-bot-auth-module:v<VERSION>
+ghcr.io/michalskalski/envoy-web-bot-auth-resolver:v<VERSION>
+ghcr.io/michalskalski/envoy-web-bot-auth-module-installer:v<VERSION>
+```
+
+Use version tags to discover a release, then pin the digest listed in that
+release in a production manifest. For example:
+
+```text
+ghcr.io/michalskalski/envoy-web-bot-auth-resolver@sha256:<DIGEST>
+```
+
+Before deployment, verify the resolver image's provenance attestation (replace
+the placeholders with the digest from the release notes):
+
+```sh
+gh attestation verify \
+  oci://ghcr.io/michalskalski/envoy-web-bot-auth-resolver@sha256:<DIGEST> \
+  --repo michalskalski/envoy-web-bot-auth
+```
+
+The module image is an image-volume artifact, not a runnable container. The
+module installer is needed only for the Kubernetes 1.34 fallback described
+below. The deterministic Kind fixture resolver is never published.
+
+## Build images locally
+
+For development or a private registry, build the module and resolver images,
+then tag and push them to a registry that your cluster can pull from:
 
 ```text
 make image

@@ -1,0 +1,103 @@
+name: Publish release images
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish and attest OCI images
+    runs-on: ubuntu-24.04
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      RESOLVER_IMAGE: ghcr.io/${{ github.repository_owner }}/envoy-web-bot-auth-resolver
+      MODULE_IMAGE: ghcr.io/${{ github.repository_owner }}/envoy-web-bot-auth-module
+      MODULE_INSTALLER_IMAGE: ghcr.io/${{ github.repository_owner }}/envoy-web-bot-auth-module-installer
+
+    steps:
+      - name: Install OCI tooling
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends --yes skopeo
+      - name: Download and verify release OCI archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir dist
+          gh release download "$RELEASE_TAG" \
+            --pattern module.oci.tar \
+            --pattern module-installer.oci.tar \
+            --pattern resolver.oci.tar \
+            --pattern SHA256SUMS \
+            --dir dist
+          cd dist
+          grep --extended-regexp '  (module|module-installer|resolver)\.oci\.tar$' SHA256SUMS \
+            | sha256sum --check
+      - name: Log in to GitHub Container Registry
+        env:
+          SKOPEO_TOKEN: ${{ github.token }}
+        run: printf '%s' "$SKOPEO_TOKEN" | skopeo login "$REGISTRY" --username "$GITHUB_ACTOR" --password-stdin
+      - name: Push verified release images
+        id: push
+        run: |
+          set -euo pipefail
+          push_archive() {
+            archive="$1"
+            image="$2"
+            output="$3"
+            skopeo copy --all "oci-archive:dist/$archive" "docker://$image:$RELEASE_TAG"
+            digest="$(skopeo inspect --format '{{.Digest}}' "docker://$image:$RELEASE_TAG")"
+            printf '%s=%s\n' "$output" "$digest" >> "$GITHUB_OUTPUT"
+          }
+          push_archive resolver.oci.tar "$RESOLVER_IMAGE" resolver_digest
+          push_archive module.oci.tar "$MODULE_IMAGE" module_digest
+          push_archive module-installer.oci.tar "$MODULE_INSTALLER_IMAGE" module_installer_digest
+      - name: Attest resolver image provenance
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-name: ${{ env.RESOLVER_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.resolver_digest }}
+          push-to-registry: true
+      - name: Attest module image provenance
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-name: ${{ env.MODULE_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.module_digest }}
+          push-to-registry: true
+      - name: Attest module installer image provenance
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+        with:
+          subject-name: ${{ env.MODULE_INSTALLER_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.module_installer_digest }}
+          push-to-registry: true
+      - name: Add image digests to release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESOLVER_DIGEST: ${{ steps.push.outputs.resolver_digest }}
+          MODULE_DIGEST: ${{ steps.push.outputs.module_digest }}
+          MODULE_INSTALLER_DIGEST: ${{ steps.push.outputs.module_installer_digest }}
+        run: |
+          gh release view "$RELEASE_TAG" --json body --jq .body > release-notes.md
+          awk '
+            $0 == "<!-- envoy-web-bot-auth-images:start -->" { skip = 1; next }
+            $0 == "<!-- envoy-web-bot-auth-images:end -->" { skip = 0; next }
+            !skip { print }
+          ' release-notes.md > release-notes-without-images.md
+          cat >> release-notes-without-images.md <<EOF
+
+          <!-- envoy-web-bot-auth-images:start -->
+          ## Container images
+
+          - \`$RESOLVER_IMAGE@$RESOLVER_DIGEST\`
+          - \`$MODULE_IMAGE@$MODULE_DIGEST\`
+          - \`$MODULE_INSTALLER_IMAGE@$MODULE_INSTALLER_DIGEST\`
+          
+          Each image has a GitHub build-provenance attestation. Verify an image
+          with \`gh attestation verify oci://IMAGE@DIGEST --repo $GITHUB_REPOSITORY\`.
+          <!-- envoy-web-bot-auth-images:end -->
+          EOF
+          gh release edit "$RELEASE_TAG" --notes-file release-notes-without-images.md
