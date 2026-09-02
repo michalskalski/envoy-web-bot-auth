@@ -49,6 +49,12 @@ jobs:
           name: release-artifacts
           path: dist
           if-no-files-found: ignore
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-kind-diagnostics
+          path: target/e2e-artifacts
+          if-no-files-found: ignore
       - if: always()
         run: make kind-down CLUSTER_NAME=envoy-web-bot-auth-release
 
