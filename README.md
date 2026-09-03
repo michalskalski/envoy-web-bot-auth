@@ -35,6 +35,9 @@ for the headers and dynamic metadata.
 Kubernetes is the primary deployment. Envoy and the resolver sidecar communicate
 through `/run/wba/resolver.sock` on a shared `emptyDir`. The supplied manifests
 run the resolver as UID and GID 65532 and use an Envoy pipe cluster.
+An [external resolver Service](examples/kind/overlays/external-resolver) is
+available as an alternative deployment example. The sidecar remains the
+default.
 
 Standalone development can use loopback TCP:
 

@@ -9,6 +9,7 @@ mod cache;
 mod composition;
 mod context;
 mod diagnostics;
+mod external_resolver;
 mod portability;
 mod scenario;
 

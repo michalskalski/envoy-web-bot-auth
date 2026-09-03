@@ -7,6 +7,12 @@ This project implements an Ed25519 focused profile of [Web Bot Auth Protocol
 The module accepts one signature and one identity per request. It supports `directory`,
 `jwks_uri`, and `cimd` key discovery.
 
+The module builds on Cloudflare's
+[`web-bot-auth`](https://docs.rs/web-bot-auth/0.7.0/web_bot_auth/) Rust crate for
+HTTP Message Signature parsing, signature-base construction, JWK handling, and
+Ed25519 verification. This project adds Envoy integration, draft-02 profile
+enforcement, key discovery, and admission policy.
+
 The default signature coverage requires `@authority` or `@target-uri` and the
 `Signature-Agent` member named by the signed component key. Operators can require
 additional supported components: `@method`, `@authority`, `@scheme`,
@@ -41,8 +47,8 @@ Client request
   v
 Envoy + Web Bot Auth module
   |  remove identity headers supplied by the caller and parse signed fields
-  v  local resolver callout (Unix socket or loopback TCP)
-Resolver sidecar
+  v  resolver callout (Unix socket or TCP)
+Resolver
   |  cache, then bounded HTTPS discovery when needed
   v
 Public key discovery endpoint
@@ -118,3 +124,8 @@ graceful shutdown.
 The Kubernetes base uses a resolver sidecar, a shared `emptyDir`, UID and GID
 65532, `fsGroup: 65532`, and an Envoy pipe cluster. The required overlay adds
 readiness gating. Kubernetes 1.34 uses the init container compatibility path.
+
+The optional external-resolver overlay uses TCP through a ClusterIP Service and
+a NetworkPolicy instead. It separates the resolver lifecycle from Envoy, but
+adds a network hop and a shared failure and trust boundary. The resolver logs a
+warning when an explicit non-loopback TCP listener is configured.

@@ -58,7 +58,11 @@ enum EgressArg {
 
 #[derive(Debug, Args)]
 struct ServeArgs {
-    #[arg(long, default_value = "tcp://127.0.0.1:8081")]
+    #[arg(
+        long,
+        default_value = "tcp://127.0.0.1:8081",
+        help = "Listen on tcp://IP:PORT or unix:///absolute/path. Non loopback TCP exposes the unauthenticated resolver API"
+    )]
     listen: String,
     #[arg(long, value_enum, default_value_t = EgressArg::Direct)]
     egress_mode: EgressArg,
@@ -234,6 +238,7 @@ async fn serve(args: ServeArgs) -> Result<(), &'static str> {
     let app = web_bot_auth_resolver::server::router(resolver);
 
     let listen = ListenAddress::parse(&args.listen)?;
+    warn_if_network_exposed(&listen);
     eprintln!(
         "resolver event=startup transport={} egress={mode:?} handlers={} fetches={} state_entries={} allow_test_keys={}",
         listen.kind(),
@@ -277,6 +282,7 @@ async fn serve_fixtures(args: ServeArgs) -> Result<(), &'static str> {
     )?;
     let app = app_with_fixture(resolver, fixture, limits.clone());
     let listen = ListenAddress::parse(&args.listen)?;
+    warn_if_network_exposed(&listen);
     eprintln!(
         "resolver event=startup transport={} egress=fixture handlers={} fetches={} state_entries={}",
         listen.kind(),
@@ -285,6 +291,12 @@ async fn serve_fixtures(args: ServeArgs) -> Result<(), &'static str> {
         limits.state_entries,
     );
     serve_app(listen, app).await
+}
+
+fn warn_if_network_exposed(listen: &ListenAddress) {
+    if let Some(address) = listen.exposed_tcp_address() {
+        eprintln!("resolver event=network_listener_exposed address={address} authentication=none");
+    }
 }
 
 #[cfg(feature = "kind-fixtures")]
@@ -455,12 +467,32 @@ mod tests {
             Ok(ListenAddress::Unix(_))
         ));
         assert!(ListenAddress::parse("0.0.0.0:8081").is_err());
-        assert!(ListenAddress::parse("tcp://0.0.0.0:8081").is_err());
-        assert!(ListenAddress::parse("tcp://192.0.2.1:8081").is_err());
+        assert!(matches!(
+            ListenAddress::parse("tcp://0.0.0.0:8081"),
+            Ok(ListenAddress::Tcp(_))
+        ));
+        assert!(matches!(
+            ListenAddress::parse("tcp://192.0.2.1:8081"),
+            Ok(ListenAddress::Tcp(_))
+        ));
         assert!(matches!(
             ListenAddress::parse("tcp://[::1]:8081"),
             Ok(ListenAddress::Tcp(_))
         ));
+    }
+
+    #[test]
+    fn identifies_network_exposed_tcp_listeners() {
+        let loopback = ListenAddress::parse("tcp://127.0.0.1:8081").unwrap();
+        let exposed = ListenAddress::parse("tcp://0.0.0.0:8081").unwrap();
+        let unix = ListenAddress::parse("unix:///run/wba/resolver.sock").unwrap();
+
+        assert_eq!(loopback.exposed_tcp_address(), None);
+        assert_eq!(
+            exposed.exposed_tcp_address(),
+            Some("0.0.0.0:8081".parse().unwrap())
+        );
+        assert_eq!(unix.exposed_tcp_address(), None);
     }
 
     #[test]

@@ -102,6 +102,31 @@ spec:
 The resolver runs as UID and GID 65532. Set pod `fsGroup: 65532` and use the
 shared `emptyDir` so Envoy can connect to the socket.
 
+## External resolver Service
+
+The [external resolver overlay](../examples/kind/overlays/external-resolver)
+runs the resolver as a separate Deployment behind a ClusterIP Service. It
+replaces the pipe cluster with a `STRICT_DNS` cluster and removes the resolver
+container and runtime volume from the Envoy pod. The sidecar remains the
+default because UDS keeps the resolver local and avoids a network trust
+boundary.
+
+The Service topology can be useful when the resolver needs an independent
+lifecycle, resource allocation, or scaling policy. With one resolver replica,
+Envoy replicas also share its in-memory cache. Multiple resolver replicas have
+independent caches. A distributed cache is not part of this example.
+
+The resolver API does not authenticate clients. The overlay includes a
+NetworkPolicy that permits ingress from the Envoy Gateway namespace. Confirm
+that the cluster network provider enforces NetworkPolicy before relying on it,
+and narrow the selectors further when multiple tenants share that namespace.
+
+Both layouts currently add the resolver cluster through
+`EnvoyProxy.spec.bootstrap`. Envoy Gateway documents this customization API,
+but does not guarantee bootstrap compatibility across minor versions. Validate
+the rendered configuration with the matching `egctl x translate` when
+upgrading Envoy Gateway.
+
 ## Attach the module
 
 Attach an `EnvoyExtensionPolicy` to the routes that need Web Bot Auth:
@@ -155,5 +180,6 @@ web-bot-auth-resolver serve \
   --egress-mode=direct
 ```
 
-TCP listeners are restricted to loopback addresses. Use the UDS sidecar layout
-for Kubernetes.
+TCP defaults to loopback. Use the UDS sidecar layout by default. An explicit
+non-loopback `--listen` address exposes the unauthenticated resolver API and
+should be paired with network access controls.

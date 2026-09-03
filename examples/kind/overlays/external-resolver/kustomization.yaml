@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../resources.yaml
+  - resolver.yaml
+patches:
+  - target:
+      group: gateway.envoyproxy.io
+      version: v1alpha1
+      kind: EnvoyProxy
+      name: web-bot-auth
+    patch: |-
+      - op: replace
+        path: /spec/bootstrap/jsonPatches/0/value
+        value:
+          name: web-bot-auth-key-resolver
+          connect_timeout: 2s
+          type: STRICT_DNS
+          load_assignment:
+            cluster_name: web-bot-auth-key-resolver
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: web-bot-auth-resolver.default.svc.cluster.local
+                          port_value: 8081
+      - op: remove
+        path: /spec/provider/kubernetes/envoyDeployment/pod/volumes/1
+      - op: remove
+        path: /spec/provider/kubernetes/envoyDeployment/container/volumeMounts/1
+      - op: remove
+        path: /spec/provider/kubernetes/envoyDeployment/patch

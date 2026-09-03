@@ -28,7 +28,7 @@ HELM = helm --kubeconfig '$(KIND_KUBECONFIG)'
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check-tools check-buildx check-release-tools metadata-test test integration-test transport-test manifest-check cluster image fixture-image module-installer-image multiarch release-metadata release-archives release-manifest sbom release-verify load-image load-fixture-image load-module-installer-image gateway up kind-up kind-apply kind-fixture-up kind-rate-limit-up kind-composition-apply clean-kind-artifacts kind-auth-test kind-composition-test kind-test kind-portability-test kind-status kind-logs kind-diagnostics kind-forward reload port-forward status down kind-down
+.PHONY: help check-tools check-buildx check-release-tools metadata-test test integration-test transport-test manifest-check cluster image fixture-image module-installer-image multiarch release-metadata release-archives release-manifest sbom release-verify load-image load-fixture-image load-module-installer-image gateway up kind-up kind-apply kind-fixture-up kind-rate-limit-up kind-composition-apply clean-kind-artifacts kind-auth-test kind-composition-test kind-test kind-external-resolver-test kind-portability-test kind-status kind-logs kind-diagnostics kind-forward reload port-forward status down kind-down
 
 help: ## Show available targets.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -64,9 +64,11 @@ integration-test: ## Run resolver transport and fixture integration tests.
 transport-test: ## Run live TLS and explicit proxy tests.
 	cargo test --locked -p web-bot-auth-resolver --lib -- --ignored --nocapture
 
-manifest-check: ## Render both base and required-only Kubernetes configurations.
+manifest-check: ## Render the Kubernetes reference configurations.
 	kubectl kustomize examples/kind >/dev/null
 	kubectl kustomize examples/kind/overlays/required --load-restrictor=LoadRestrictionsNone >/dev/null
+	kubectl kustomize examples/kind/overlays/external-resolver --load-restrictor=LoadRestrictionsNone >/dev/null
+	kubectl kustomize examples/kind/overlays/external-resolver-fixtures --load-restrictor=LoadRestrictionsNone >/dev/null
 	kubectl kustomize examples/kind/composition --load-restrictor=LoadRestrictionsNone >/dev/null
 
 multiarch: check-buildx ## Build amd64/arm64 OCI archives without publishing.
@@ -332,6 +334,14 @@ kind-test: kind-apply ## Run all kind scenarios and keep the cluster for inspect
 	cargo test --locked -p web-bot-auth-test-harness --features kind-fixtures --test kind_e2e -- --ignored --nocapture --test-threads=1 rotation_replaces_removed_keys
 	cargo test --locked -p web-bot-auth-test-harness --features kind-fixtures --test kind_e2e -- --ignored --nocapture --test-threads=1 resolver_sidecar_restart_recovers
 	$(MAKE) kind-composition-test
+
+kind-external-resolver-test: kind-up load-fixture-image ## Verify the resolver Service topology.
+	$(MAKE) clean-kind-artifacts
+	kubectl kustomize examples/kind/overlays/external-resolver-fixtures --load-restrictor=LoadRestrictionsNone | $(KUBECTL) apply --filename -
+	$(KUBECTL) rollout status deployment/web-bot-auth-resolver --namespace '$(GATEWAY_NAMESPACE)' --timeout=5m
+	$(KUBECTL) rollout status deployment --namespace '$(EG_NAMESPACE)' \
+		--selector '$(ENVOY_SERVICE_SELECTOR)' --timeout=5m
+	cargo test --locked -p web-bot-auth-test-harness --features kind-fixtures --test kind_e2e -- --ignored --nocapture --test-threads=1 external_resolver_service_verifies_request
 
 kind-portability-test: kind-up load-fixture-image load-module-installer-image ## Run the module loading compatibility scenario.
 	kubectl kustomize examples/kind/overlays/init-container --load-restrictor=LoadRestrictionsNone | $(KUBECTL) apply --filename -

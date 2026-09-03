@@ -30,6 +30,12 @@ Rust suite runs against a persistent cluster:
 make kind-test
 ```
 
+The alternative resolver Service topology has one focused scenario:
+
+```sh
+make kind-external-resolver-test
+```
+
 The suite leaves the cluster and generated resources in place. Inspect them
 with `make kind-status` and `make kind-logs`, or keep a manual gateway forward
 open with `make kind-forward`. Select a manual mode with `make kind-apply

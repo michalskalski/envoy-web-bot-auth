@@ -60,7 +60,7 @@ The resolver starts with `serve`.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `--listen` | `tcp://127.0.0.1:8081` | Loopback TCP or a Unix socket URI |
+| `--listen` | `tcp://127.0.0.1:8081` | TCP socket address or a Unix socket URI. Non loopback TCP exposes the unauthenticated API |
 | `--egress-mode` | `direct` | `direct` or `proxy` |
 | `--allowed-port` | `443` | Repeat to allow destination ports |
 | `--allow-test-keys` | off | Permit known RFC test keys for development |

@@ -29,9 +29,6 @@ impl ListenAddress {
             let address = address
                 .parse::<SocketAddr>()
                 .map_err(|_| "invalid_tcp_listen")?;
-            if !address.ip().is_loopback() {
-                return Err("invalid_tcp_listen");
-            }
             return Ok(Self::Tcp(address));
         }
         if let Some(path) = value.strip_prefix("unix://") {
@@ -48,6 +45,13 @@ impl ListenAddress {
         match self {
             Self::Tcp(_) => "tcp",
             Self::Unix(_) => "unix",
+        }
+    }
+
+    pub(super) fn exposed_tcp_address(&self) -> Option<SocketAddr> {
+        match self {
+            Self::Tcp(address) if !address.ip().is_loopback() => Some(*address),
+            Self::Tcp(_) | Self::Unix(_) => None,
         }
     }
 }

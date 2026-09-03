@@ -1,0 +1,30 @@
+# The fixture resolver is compiled with the non-default `kind-fixtures`
+# feature. Never use this overlay outside deterministic integration tests.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../external-resolver
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: web-bot-auth-resolver
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: envoy-web-bot-auth-resolver-fixtures:dev
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value:
+          - serve-fixtures
+          - --listen=tcp://0.0.0.0:8081
+  - target:
+      group: gateway.envoyproxy.io
+      version: v1alpha1
+      kind: EnvoyExtensionPolicy
+      name: web-bot-auth
+    patch: |-
+      - op: replace
+        path: /spec/dynamicModule/0/config/mode
+        value: required
