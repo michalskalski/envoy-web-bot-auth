@@ -12,9 +12,10 @@ pub const MAX_RESOLVE_BODY_BYTES: usize = 8 * 1_024;
 pub const DIRECTORY_PATH: &str = "/.well-known/http-message-signatures-directory";
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum WebBotAuthProfile {
-    Draft02,
+pub enum ResolverApiVersion {
+    /// First version of the module-to-resolver JSON contract.
+    #[serde(rename = "v1")]
+    V1,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Hash, PartialEq, Eq, Serialize)]
@@ -28,7 +29,7 @@ pub enum DiscoveryMechanism {
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct ResolveRequest {
-    pub profile: WebBotAuthProfile,
+    pub api_version: ResolverApiVersion,
     pub discovery: DiscoveryMechanism,
     pub agent_url: String,
     pub key_id: String,
@@ -251,7 +252,7 @@ mod tests {
     #[test]
     fn request_wire_format_is_exact() {
         let request = ResolveRequest {
-            profile: WebBotAuthProfile::Draft02,
+            api_version: ResolverApiVersion::V1,
             discovery: DiscoveryMechanism::JwksUri,
             agent_url: "https://agent.example/keys?generation=2".into(),
             key_id: "thumbprint".into(),
@@ -260,6 +261,13 @@ mod tests {
             serde_json::to_string(&request).unwrap(),
             include_str!("../tests/wire/resolve-request.json").trim(),
         );
+    }
+
+    #[test]
+    fn unknown_resolver_api_version_is_rejected() {
+        let request =
+            include_str!("../tests/wire/resolve-request.json").replace("\"v1\"", "\"v2\"");
+        assert!(serde_json::from_str::<ResolveRequest>(&request).is_err());
     }
 
     #[test]

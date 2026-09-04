@@ -110,7 +110,7 @@ mod tests {
         let compatibility = load_compatibility(&path).expect("record is valid");
         fs::remove_file(path).expect("temporary record can be removed");
         assert_eq!(compatibility.envoy_gateway, "v1.9.1");
-        assert_eq!(compatibility.protocol_published, "2026-08-18");
+        assert_eq!(compatibility.protocol_published, "2026-09-01");
     }
 
     #[test]

@@ -21,7 +21,7 @@ when configuring Envoy directly, under the Dynamic Module HTTP filter's
 | `accept_legacy_signature_agent` | `false` | Accept the older item form of `Signature-Agent` |
 | `forward_identity_headers` | `true` | Send trusted status, identity, and key ID headers downstream |
 
-The default Protocol 02 profile requires `@authority` or `@target-uri` and the
+By default, verification requires `@authority` or `@target-uri` and the
 matching `Signature-Agent` member. `required_components` can contain only:
 
 ```text

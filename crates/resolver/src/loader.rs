@@ -158,7 +158,7 @@ mod tests {
     };
     use url::Url;
     use web_bot_auth_protocol::{
-        DiscoveryMechanism, Ed25519Jwk, ResolveRequest, ResolveResponse, WebBotAuthProfile,
+        DiscoveryMechanism, Ed25519Jwk, ResolveRequest, ResolveResponse, ResolverApiVersion,
     };
 
     const X: &str = "JrQLj5P_89iXES9-vFgrIy29clF9CC_oPPsw3c5D0bs";
@@ -204,7 +204,7 @@ mod tests {
 
     fn request(key_id: String) -> ResolveRequest {
         ResolveRequest {
-            profile: WebBotAuthProfile::Draft02,
+            api_version: ResolverApiVersion::V1,
             discovery: DiscoveryMechanism::JwksUri,
             agent_url: "https://agent.example/keys?generation=2#ignored".into(),
             key_id,

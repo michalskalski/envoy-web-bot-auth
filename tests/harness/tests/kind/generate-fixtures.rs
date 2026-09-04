@@ -1,4 +1,4 @@
-//! Generate a current, draft-02 Web Bot Auth request for kind scenarios.
+//! Generate a current Web Bot Auth request for kind scenarios.
 //!
 //! The committed JWKs are deliberately test only. This binary uses the same
 //! signing crate as the module, so its output remains a useful integration
@@ -194,7 +194,7 @@ async fn main() -> Result<(), String> {
         Algorithm::Ed25519,
         &private_key,
     )
-    .map_err(|_| "could not generate draft-02 signature")?;
+    .map_err(|_| "could not generate Web Bot Auth signature")?;
     if args.tamper {
         tamper_signature(&mut request.signature)?;
     }

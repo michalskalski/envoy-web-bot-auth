@@ -1,7 +1,7 @@
 //! Resolver response validation and result construction.
 
 use crate::{
-    draft02::Draft02Candidate,
+    candidate::VerificationCandidate,
     policy::{InvalidKind, Reason, UnverifiedKind, VerificationResult, VerifiedIdentity},
 };
 use envoy_proxy_dynamic_modules_rust_sdk::EnvoyBuffer;
@@ -31,7 +31,7 @@ pub(super) fn join_response_body(chunks: &[EnvoyBuffer]) -> Option<Vec<u8>> {
 }
 
 pub(super) fn verify_resolver_response(
-    candidate: Draft02Candidate,
+    candidate: VerificationCandidate,
     response: Result<ResolveResponse, Reason>,
 ) -> VerificationResult {
     let response = match response {
@@ -124,7 +124,7 @@ mod tests {
         path: String,
     }
 
-    fn candidate() -> Draft02Candidate {
+    fn candidate() -> VerificationCandidate {
         let vector: Vector =
             serde_json::from_str(include_str!("../../../tests/vectors/draft-02-ed25519.json"))
                 .expect("the official vector is valid JSON");
@@ -137,7 +137,7 @@ mod tests {
             signature_agent: vec![vector.signature_agent],
             ..RequestComponents::from_pseudo_headers("GET", "unused", "/unused")
         };
-        Draft02Candidate::parse(&request, false, &[], 1_735_690_000, u64::MAX, 0)
+        VerificationCandidate::parse(&request, false, &[], 1_735_690_000, u64::MAX, 0)
             .expect("the official vector is a valid candidate")
     }
 

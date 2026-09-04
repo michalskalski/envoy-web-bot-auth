@@ -12,7 +12,7 @@ use tokio::sync::Notify;
 use tower::ServiceExt;
 use web_bot_auth_protocol::{
     DiscoveryMechanism, Ed25519Jwk, MAX_RESOLVE_BODY_BYTES, ResolveRequest, ResolveResponse,
-    WebBotAuthProfile,
+    ResolverApiVersion,
 };
 use web_bot_auth_resolver::{
     DestinationPolicy, DnsResolver, FetchError, FetchErrorKind, FetchRequest, FetchResponse,
@@ -65,7 +65,7 @@ const TEST_X: &str = "JrQLj5P_89iXES9-vFgrIy29clF9CC_oPPsw3c5D0bs";
 
 fn request(agent_url: &str, key_id: &str) -> ResolveRequest {
     ResolveRequest {
-        profile: WebBotAuthProfile::Draft02,
+        api_version: ResolverApiVersion::V1,
         discovery: DiscoveryMechanism::JwksUri,
         agent_url: agent_url.to_owned(),
         key_id: key_id.to_owned(),
@@ -235,7 +235,7 @@ async fn real_http_router_maps_malformed_json_and_request_to_bad_request() {
         StatusCode::BAD_REQUEST
     );
     let invalid = request_body(&ResolveRequest {
-        profile: WebBotAuthProfile::Draft02,
+        api_version: ResolverApiVersion::V1,
         discovery: DiscoveryMechanism::JwksUri,
         agent_url: "http://agent.example/keys".to_owned(),
         key_id: "key".to_owned(),
@@ -327,7 +327,7 @@ async fn real_http_router_limits_cimd_to_metadata_and_one_key_fetch() {
     ));
     let jwk = Ed25519Jwk::new(TEST_X.to_owned());
     let body = request_body(&ResolveRequest {
-        profile: WebBotAuthProfile::Draft02,
+        api_version: ResolverApiVersion::V1,
         discovery: DiscoveryMechanism::Cimd,
         agent_url: "https://agent.example/metadata".to_owned(),
         key_id: jwk.b64_thumbprint(),

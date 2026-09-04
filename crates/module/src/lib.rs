@@ -1,4 +1,4 @@
-//! Envoy dynamic HTTP module for Web Bot Auth draft-02 verification.
+//! Envoy dynamic HTTP module for Web Bot Auth verification with Ed25519.
 //!
 //! Request capture and protocol parsing are kept separate from the Envoy ABI
 //! adapter so the trust decisions remain testable without an Envoy process.
@@ -6,8 +6,8 @@
 // Required by the factory-registration macro in the Envoy SDK.
 #![allow(unpredictable_function_pointer_comparisons)]
 
+mod candidate;
 mod config;
-mod draft02;
 mod filter;
 mod policy;
 mod request;

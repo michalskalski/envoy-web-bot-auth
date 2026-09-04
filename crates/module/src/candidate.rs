@@ -5,7 +5,7 @@ use web_bot_auth::components::{CoveredComponent, DerivedComponent, HTTPFieldPara
 use web_bot_auth_protocol::{DiscoveryMechanism, MAX_KEY_ID_BYTES, parse_discovery_target};
 
 #[derive(Clone, Debug)]
-pub(crate) struct Draft02Candidate {
+pub(crate) struct VerificationCandidate {
     pub(crate) verifier: WebBotAuthVerifier,
     pub(crate) discovery: DiscoveryMechanism,
     pub(crate) signed_url: String,
@@ -16,7 +16,7 @@ pub(crate) struct Draft02Candidate {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum CandidateError {
     Malformed,
-    /// Draft 02 permits multiple Web Bot Auth signatures. This module currently
+    /// The protocol permits multiple Web Bot Auth signatures. This module currently
     /// supports exactly one: the dependency selects one label, the filter tracks
     /// one resolver call, and the trusted output represents one identity.
     MultipleSignatures,
@@ -89,7 +89,7 @@ struct SelectedAgent {
     form: SignatureAgentForm,
 }
 
-impl Draft02Candidate {
+impl VerificationCandidate {
     pub(crate) fn parse(
         request: &RequestComponents,
         accept_legacy: bool,
@@ -548,7 +548,7 @@ mod tests {
     #[test]
     fn accepts_the_protocol_minimum_coverage() {
         for component in ["@authority", "@target-uri"] {
-            let candidate = Draft02Candidate::parse(
+            let candidate = VerificationCandidate::parse(
                 &request(r#"sig1="https://agent.example""#, &minimum_input(component)),
                 false,
                 &[],
@@ -564,7 +564,7 @@ mod tests {
     #[test]
     fn accepts_absent_algorithm_for_the_ed25519_profile() {
         let input = valid_input().replace(";alg=\"ed25519\"", "");
-        Draft02Candidate::parse(
+        VerificationCandidate::parse(
             &request(r#"sig1="https://agent.example""#, &input),
             false,
             &[],
@@ -579,7 +579,7 @@ mod tests {
     fn rejects_an_incompatible_stated_algorithm() {
         let input = valid_input().replace(";alg=\"ed25519\"", ";alg=\"rsa-pss-sha512\"");
         assert_eq!(
-            Draft02Candidate::parse(
+            VerificationCandidate::parse(
                 &request(r#"sig1="https://agent.example""#, &input),
                 false,
                 &[],
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn parses_typed_discovery_and_normalizes_identifiers() {
-        let candidate = Draft02Candidate::parse(
+        let candidate = VerificationCandidate::parse(
             &request(
                 r#"sig1="https://Agent.Example:443/keys?roll=2#ignored";type=jwks_uri"#,
                 valid_input(),
@@ -619,7 +619,7 @@ mod tests {
 
     #[test]
     fn directory_requires_an_origin_and_resolves_the_well_known_uri() {
-        let candidate = Draft02Candidate::parse(
+        let candidate = VerificationCandidate::parse(
             &request(r#"sig1="https://agent.example/""#, valid_input()),
             false,
             &[],
@@ -633,7 +633,7 @@ mod tests {
             "https://agent.example/.well-known/http-message-signatures-directory"
         );
 
-        let error = Draft02Candidate::parse(
+        let error = VerificationCandidate::parse(
             &request(r#"sig1="https://agent.example/keys""#, valid_input()),
             false,
             &[],
@@ -647,7 +647,7 @@ mod tests {
 
     #[test]
     fn rejects_wrong_label_and_multiple_profile_signatures() {
-        let error = Draft02Candidate::parse(
+        let error = VerificationCandidate::parse(
             &request(r#"other="https://agent.example""#, valid_input()),
             false,
             &[],
@@ -659,7 +659,7 @@ mod tests {
         assert_eq!(error, CandidateError::MissingSignatureAgent);
 
         let input = format!("{}, sig2={}", valid_input(), &valid_input()[5..]);
-        let error = Draft02Candidate::parse(
+        let error = VerificationCandidate::parse(
             &request(r#"sig1="https://agent.example""#, &input),
             false,
             &[],
@@ -673,7 +673,7 @@ mod tests {
 
     #[test]
     fn rejects_insecure_urls_and_stale_or_overlong_signatures() {
-        let error = Draft02Candidate::parse(
+        let error = VerificationCandidate::parse(
             &request(r#"sig1="http://agent.example""#, valid_input()),
             false,
             &[],
@@ -684,7 +684,7 @@ mod tests {
         .expect_err("https is mandatory");
         assert_eq!(error, CandidateError::InvalidDiscoveryUrl);
 
-        let error = Draft02Candidate::parse(
+        let error = VerificationCandidate::parse(
             &request(r#"sig1="https://agent.example""#, valid_input()),
             false,
             &[],
@@ -698,7 +698,7 @@ mod tests {
 
     #[test]
     fn rejects_an_empty_key_id_before_resolver_lookup() {
-        let error = Draft02Candidate::parse(
+        let error = VerificationCandidate::parse(
             &request(
                 r#"sig1="https://agent.example""#,
                 r#"sig1=("@method" "@authority" "@path" "signature-agent";key="sig1");created=1735689600;expires=1735693200;keyid="";alg="ed25519";tag="web-bot-auth""#,
@@ -749,7 +749,7 @@ mod tests {
             signature_agent: vec![vector.signature_agent],
             ..RequestComponents::from_pseudo_headers("GET", "unused", "/unused")
         };
-        let candidate = Draft02Candidate::parse(&request, false, &[], 1735690000, u64::MAX, 0)
+        let candidate = VerificationCandidate::parse(&request, false, &[], 1735690000, u64::MAX, 0)
             .expect("the official minimum coverage is accepted");
         let jwk = Thumbprintable::OKP {
             crv: "Ed25519".into(),

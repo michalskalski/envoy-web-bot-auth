@@ -30,7 +30,7 @@ RUN case "$TARGETARCH" in \
 # volume. It is deliberately not a replacement Envoy image.
 FROM scratch AS module-artifact
 LABEL org.opencontainers.image.title="Envoy Web Bot Auth module" \
-      org.opencontainers.image.description="Envoy dynamic module for Web Bot Auth draft-02 verification" \
+      org.opencontainers.image.description="Envoy dynamic module for Web Bot Auth verification with Ed25519" \
       org.opencontainers.image.url="https://github.com/michalskalski/envoy-web-bot-auth" \
       org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/deployment.md" \
       org.opencontainers.image.source="https://github.com/michalskalski/envoy-web-bot-auth" \
