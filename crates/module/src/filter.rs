@@ -1,7 +1,7 @@
 //! Envoy request state and callback pipeline.
 
+use crate::candidate::VerificationCandidate;
 use crate::config::Settings;
-use crate::draft02::Draft02Candidate;
 use crate::policy::{
     Admission, InvalidKind, Reason, UnverifiedKind, VerificationResult, admission,
 };
@@ -13,7 +13,7 @@ use envoy_proxy_dynamic_modules_rust_sdk::{
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use web_bot_auth_protocol::{
-    MAX_RESOLVE_BODY_BYTES, ResolveRequest, ResolveResponse, WebBotAuthProfile,
+    MAX_RESOLVE_BODY_BYTES, ResolveRequest, ResolveResponse, ResolverApiVersion,
 };
 
 pub(crate) struct WebBotAuthFilter {
@@ -110,7 +110,7 @@ impl WebBotAuthFilter {
 
 struct PendingVerification {
     callout_id: u64,
-    candidate: Draft02Candidate,
+    candidate: VerificationCandidate,
 }
 
 impl<EHF> HttpFilter<EHF> for WebBotAuthFilter
@@ -170,7 +170,7 @@ where
                         );
                     }
                 };
-                let candidate = match Draft02Candidate::parse(
+                let candidate = match VerificationCandidate::parse(
                     &request,
                     self.settings.accept_legacy_signature_agent,
                     &self.settings.required_components,
@@ -182,7 +182,7 @@ where
                     Err(error) => return self.finish(envoy_filter, error.result()),
                 };
                 let resolver_request = ResolveRequest {
-                    profile: WebBotAuthProfile::Draft02,
+                    api_version: ResolverApiVersion::V1,
                     discovery: candidate.discovery,
                     agent_url: candidate.signed_url.clone(),
                     key_id: candidate.key_id.clone(),

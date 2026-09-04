@@ -2,15 +2,17 @@
 
 ## Protocol profile
 
-This project implements an Ed25519 focused profile of [Web Bot Auth Protocol
-02](https://datatracker.ietf.org/doc/html/draft-meunier-webbotauth-httpsig-protocol-02).
+This project implements an Ed25519-focused profile of
+[`draft-ietf-webbotauth-httpsig-protocol-00`](https://www.ietf.org/archive/id/draft-ietf-webbotauth-httpsig-protocol-00.html).
+The [IETF Datatracker](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/)
+records the current working-group revision and document status.
 The module accepts one signature and one identity per request. It supports `directory`,
 `jwks_uri`, and `cimd` key discovery.
 
 The module builds on Cloudflare's
 [`web-bot-auth`](https://docs.rs/web-bot-auth/0.7.0/web_bot_auth/) Rust crate for
 HTTP Message Signature parsing, signature-base construction, JWK handling, and
-Ed25519 verification. This project adds Envoy integration, draft-02 profile
+Ed25519 verification. This project adds Envoy integration, profile
 enforcement, key discovery, and admission policy.
 
 The default signature coverage requires `@authority` or `@target-uri` and the
@@ -30,8 +32,22 @@ review, fixtures, compatibility tests, and an explicit release decision. An RFC
 is treated as a new target until it passes the same review.
 
 Known RFC 9421 Ed25519 test keys are rejected unless `--allow-test-keys` is set
-for development. Version 1 has no nonce store, so a valid signature can be
-replayed until its expiry and covered request scope no longer permit it.
+for development. This implementation has no nonce store, so a valid signature
+can be replayed until its expiry and covered request scope no longer permit it.
+
+## Module-resolver API
+
+The module and resolver exchange JSON protocol defined in repository. Its
+`api_version` field is `v1`. This version describes compatibility between those
+two components. It does not describe an Ed25519 profile, the project release,
+or an IETF draft revision.
+
+The API version changes only when a module and resolver using the old and new
+contracts can no longer communicate safely. Reviewing a new IETF draft does not
+change the API version unless implementing that draft requires such an
+incompatible contract change. The supported algorithm remains explicit in the
+`Ed25519Jwk` response type, while `compatibility.toml` records the reviewed IETF
+revision.
 
 ## Request flow
 

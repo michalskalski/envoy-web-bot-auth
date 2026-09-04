@@ -57,8 +57,11 @@ fn compatibility_record_documents_both_module_loading_paths() {
 #[test]
 fn workspace_packages_keep_protocol_and_artifact_boundaries_explicit() {
     let record = repository_file("compatibility.toml");
-    assert_eq!(record_value(&record, "protocol_revision"), "draft-02");
-    assert_eq!(record_value(&record, "protocol_published"), "2026-08-18");
+    assert_eq!(
+        record_value(&record, "protocol_revision"),
+        "draft-ietf-webbotauth-httpsig-protocol-00"
+    );
+    assert_eq!(record_value(&record, "protocol_published"), "2026-09-01");
     assert_eq!(record_value(&record, "rust_toolchain"), "1.97.1");
     assert_eq!(
         record_value(&record, "module_target"),

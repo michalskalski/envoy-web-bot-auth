@@ -168,7 +168,7 @@ mod tests {
     use crate::{DestinationPolicy, Limits, ResolverService};
     use std::sync::Arc;
     use web_bot_auth_protocol::{
-        DiscoveryMechanism, ResolveRequest, ResolveResponse, WebBotAuthProfile,
+        DiscoveryMechanism, ResolveRequest, ResolveResponse, ResolverApiVersion,
     };
 
     fn request() -> FetchRequest {
@@ -243,7 +243,7 @@ mod tests {
         .expect("fixture limits are valid");
         let response = service
             .resolve(ResolveRequest {
-                profile: WebBotAuthProfile::Draft02,
+                api_version: ResolverApiVersion::V1,
                 discovery: DiscoveryMechanism::Directory,
                 agent_url: FIXTURE_AGENT_URL.to_owned(),
                 key_id: expected_key_id,

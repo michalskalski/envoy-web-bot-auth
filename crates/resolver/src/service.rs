@@ -12,7 +12,7 @@ use std::sync::Arc;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use web_bot_auth_protocol::{
     DiscoveryMechanism, Ed25519Jwk, MAX_AGENT_URL_BYTES, MAX_KEY_ID_BYTES, ResolveRequest,
-    ResolveResponse, WebBotAuthProfile, parse_discovery_target,
+    ResolveResponse, ResolverApiVersion, parse_discovery_target,
 };
 
 const TEST_KEY_THUMBPRINTS: &[&str] = &["poqkLGiymh_W0uP6PZFw-dvez3QJT5SolqXBCW38r0U"];
@@ -142,7 +142,7 @@ impl ResolverService {
 fn validate_request(
     request: &ResolveRequest,
 ) -> Result<web_bot_auth_protocol::DiscoveryTarget, FetchError> {
-    if request.profile != WebBotAuthProfile::Draft02
+    if request.api_version != ResolverApiVersion::V1
         || request.key_id.is_empty()
         || request.key_id.len() > MAX_KEY_ID_BYTES
         || request.agent_url.len() > MAX_AGENT_URL_BYTES
