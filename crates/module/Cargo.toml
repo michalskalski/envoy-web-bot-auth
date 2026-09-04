@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Envoy dynamic module for Ed25519-focused Web Bot Auth verification"
+description = "Envoy dynamic module for Web Bot Auth verification with Ed25519"
 publish = false
 
 [lib]

@@ -1,4 +1,4 @@
-//! Envoy dynamic HTTP module for Ed25519-focused Web Bot Auth verification.
+//! Envoy dynamic HTTP module for Web Bot Auth verification with Ed25519.
 //!
 //! Request capture and protocol parsing are kept separate from the Envoy ABI
 //! adapter so the trust decisions remain testable without an Envoy process.

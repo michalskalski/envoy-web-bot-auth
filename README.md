@@ -1,8 +1,8 @@
 # Envoy Web Bot Auth
 
-Envoy Web Bot Auth is an Envoy Dynamic Module and local resolver for an
-Ed25519-focused profile of the [Web Bot Auth HTTP Message Signatures working-group
-draft](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/).
+Envoy Web Bot Auth is an Envoy Dynamic Module and local resolver that uses
+Ed25519 to implement a profile of the [Web Bot Auth HTTP Message Signatures
+working group draft](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/).
 The reviewed implementation baseline is
 [`draft-ietf-webbotauth-httpsig-protocol-00`](https://www.ietf.org/archive/id/draft-ietf-webbotauth-httpsig-protocol-00.html).
 It verifies signed automated requests at the gateway, resolves public

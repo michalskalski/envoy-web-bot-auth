@@ -2,7 +2,7 @@
 
 ## Protocol profile
 
-This project implements an Ed25519-focused profile of
+This project uses Ed25519 to implement a profile of
 [`draft-ietf-webbotauth-httpsig-protocol-00`](https://www.ietf.org/archive/id/draft-ietf-webbotauth-httpsig-protocol-00.html).
 The [IETF Datatracker](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/)
 records the current working-group revision and document status.
