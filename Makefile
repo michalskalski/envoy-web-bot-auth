@@ -28,7 +28,7 @@ HELM = helm --kubeconfig '$(KIND_KUBECONFIG)'
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check-tools check-buildx check-release-tools metadata-test test integration-test transport-test manifest-check cluster image fixture-image module-installer-image multiarch release-metadata release-archives release-manifest sbom release-verify load-image load-fixture-image load-module-installer-image gateway up kind-up kind-apply kind-fixture-up kind-rate-limit-up kind-composition-apply clean-kind-artifacts kind-auth-test kind-composition-test kind-test kind-external-resolver-test kind-portability-test kind-status kind-logs kind-diagnostics kind-forward reload port-forward status down kind-down
+.PHONY: help check-tools check-buildx check-release-tools metadata-test test integration-test transport-test manifest-check cluster image fixture-image module-installer-image multiarch release-metadata release-archives release-manifest sbom release-verify release-artifacts-verify load-image load-fixture-image load-module-installer-image gateway up kind-up kind-apply kind-fixture-up kind-rate-limit-up kind-composition-apply clean-kind-artifacts kind-auth-test kind-composition-test kind-test kind-external-resolver-test kind-portability-test kind-status kind-logs kind-diagnostics kind-forward reload port-forward status down kind-down
 
 help: ## Show available targets.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -149,8 +149,11 @@ sbom: multiarch ## Generate SPDX JSON SBOMs for every OCI archive.
 	syft 'oci-archive:$(RELEASE_DIR)/resolver.oci.tar' --platform linux/amd64 --select-catalogers '+cargo-auditable-binary-cataloger' --output 'spdx-json=$(RELEASE_DIR)/resolver-amd64.spdx.json'
 	syft 'oci-archive:$(RELEASE_DIR)/resolver.oci.tar' --platform linux/arm64 --select-catalogers '+cargo-auditable-binary-cataloger' --output 'spdx-json=$(RELEASE_DIR)/resolver-arm64.spdx.json'
 
-release-verify: test manifest-check check-release-tools release-manifest ## Run local release gates; kind scenarios remain a separate required gate.
+release-verify: test manifest-check check-release-tools ## Run all local release gates; kind scenarios remain a separate required gate.
 	cargo deny check --warn unmaintained
+	$(MAKE) release-artifacts-verify
+
+release-artifacts-verify: release-manifest ## Verify release artifacts after the Rust, manifest, and tool checks pass.
 	@set -euo pipefail; \
 	for archive in \
 		'$(RELEASE_DIR)/envoy-web-bot-auth-module-$(RELEASE_VERSION)-$(ENVOY_LINE)-linux-amd64.tar.gz' \

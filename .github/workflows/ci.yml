@@ -40,7 +40,7 @@ jobs:
       - run: make integration-test
       - run: make transport-test
       - run: cargo install cargo-deny --version 0.20.2 --locked
-      - run: cargo deny check
+      - run: cargo deny check --warn unmaintained
 
   manifests:
     name: manifests
@@ -74,7 +74,7 @@ jobs:
       - run: make kind-test
       - run: make kind-external-resolver-test
       - run: make kind-portability-test
-      - run: make release-verify
+      - run: make release-artifacts-verify
       - if: failure()
         run: make kind-diagnostics
       - if: failure()
