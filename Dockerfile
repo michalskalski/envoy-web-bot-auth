@@ -32,7 +32,7 @@ FROM scratch AS module-artifact
 LABEL org.opencontainers.image.title="Envoy Web Bot Auth module" \
       org.opencontainers.image.description="Envoy dynamic module for Web Bot Auth verification with Ed25519" \
       org.opencontainers.image.url="https://github.com/michalskalski/envoy-web-bot-auth" \
-      org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/deployment.md" \
+      org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/operations.md" \
       org.opencontainers.image.source="https://github.com/michalskalski/envoy-web-bot-auth" \
       org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=builder /out/libenvoy_web_bot_auth.so /libenvoy_web_bot_auth.so
@@ -42,7 +42,7 @@ FROM busybox:1.37.0@sha256:9db7b59979c38555a39def84a31fb98b5296952f9e3afd4f6f11f
 LABEL org.opencontainers.image.title="Envoy Web Bot Auth module installer" \
       org.opencontainers.image.description="Kubernetes init-container fallback for the Envoy Web Bot Auth module" \
       org.opencontainers.image.url="https://github.com/michalskalski/envoy-web-bot-auth" \
-      org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/deployment.md" \
+      org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/operations.md" \
       org.opencontainers.image.source="https://github.com/michalskalski/envoy-web-bot-auth" \
       org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=builder /out/libenvoy_web_bot_auth.so /opt/web-bot-auth/libenvoy_web_bot_auth.so
@@ -53,7 +53,7 @@ FROM scratch AS resolver
 LABEL org.opencontainers.image.title="Web Bot Auth resolver" \
       org.opencontainers.image.description="Bounded Web Bot Auth discovery resolver sidecar" \
       org.opencontainers.image.url="https://github.com/michalskalski/envoy-web-bot-auth" \
-      org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/deployment.md" \
+      org.opencontainers.image.documentation="https://github.com/michalskalski/envoy-web-bot-auth/blob/main/docs/operations.md" \
       org.opencontainers.image.source="https://github.com/michalskalski/envoy-web-bot-auth" \
       org.opencontainers.image.licenses="Apache-2.0"
 COPY --from=builder /out/web-bot-auth-resolver /web-bot-auth-resolver

@@ -15,8 +15,7 @@ grant authorization, express reputation, or provide replay protection.
 
 See [the architecture](docs/architecture.md) for the supported protocol profile,
 resolver design, limits, egress model, and protocol update policy. See
-[deployment](docs/deployment.md) and [configuration](docs/configuration.md) for
-operator setup.
+[operations](docs/operations.md) for deployment, configuration, and metrics.
 
 ## Admission modes
 
@@ -30,50 +29,8 @@ operator setup.
 
 After verification, the module enriches the request with trusted authentication
 data for later Envoy filters and upstream services. Use that data for your own
-authorization and rate policy. See [trusted outputs](docs/configuration.md#trusted-outputs)
+authorization and rate policy. See [trusted outputs](docs/operations.md#trusted-outputs)
 for the headers and dynamic metadata.
 
-## Deployment
-
-Kubernetes is the primary deployment. Envoy and the resolver sidecar communicate
-through `/run/wba/resolver.sock` on a shared `emptyDir`. The supplied manifests
-run the resolver as UID and GID 65532 and use an Envoy pipe cluster.
-An [external resolver Service](examples/kind/overlays/external-resolver) is
-available as an alternative deployment example. The sidecar remains the
-default.
-
-Standalone development can use loopback TCP:
-
-```text
-web-bot-auth-resolver serve \
-  --listen=tcp://127.0.0.1:8081 \
-  --egress-mode=direct
-```
-
-The resolver supports `direct` and `proxy` egress. Direct mode validates DNS
-answers and pins the selected address. Proxy mode requires a trusted proxy to
-enforce final destination policy. Details are in [the architecture](docs/architecture.md#egress).
-
-## Try and verify
-
-Use the persistent local Kubernetes environment:
-
-```text
-make kind-up
-make kind-apply MODE=required
-make kind-test
-```
-
-Run the local and release gates with:
-
-```text
-make test
-make integration-test
-make transport-test
-make manifest-check
-make release-verify
-```
-
-`nix develop` provides the required client tools.
 [CONTRIBUTING.md](CONTRIBUTING.md) describes the contributor and
 release workflow.

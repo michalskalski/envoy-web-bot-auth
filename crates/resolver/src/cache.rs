@@ -3,6 +3,7 @@
 use super::{
     fetch::{FetchError, FetchErrorKind, FetchResponse, ResourceKind},
     loader::ResourceLoader,
+    metrics::Metrics,
     resource::{ParsedResource, parse_resource},
 };
 use http::{HeaderMap, Request, Response};
@@ -66,16 +67,18 @@ pub(super) struct RefreshOutcome {
 pub(super) struct CacheStore {
     representations: Cache<ResourceKey, Arc<Representation>>,
     refreshes: Cache<ResourceKey, Arc<RefreshOutcome>>,
+    metrics: Metrics,
 }
 
 impl CacheStore {
-    pub(super) fn new(state_entries: u64, refresh_ttl: Duration) -> Self {
+    pub(super) fn new(state_entries: u64, refresh_ttl: Duration, metrics: Metrics) -> Self {
         Self {
             representations: Cache::builder().max_capacity(state_entries).build(),
             refreshes: Cache::builder()
                 .max_capacity(state_entries)
                 .time_to_live(refresh_ttl)
                 .build(),
+            metrics,
         }
     }
 
@@ -92,6 +95,7 @@ impl CacheStore {
             .and_then(|representation| representation.fresh_request(&request, now))
             .is_some()
         {
+            self.metrics.cache_event("fresh_hit");
             return Ok(previous.expect("checked as present"));
         }
 
@@ -127,9 +131,13 @@ impl CacheStore {
                     error.allows_stale() && old.stale_allowed_after_error(now)
                 }) =>
             {
+                self.metrics.cache_event("stale_on_error");
                 Ok(previous.expect("checked as present"))
             }
-            Err(error) => Err(error.clone()),
+            Err(error) => {
+                self.metrics.cache_event("error");
+                Err(error.clone())
+            }
         }
     }
 

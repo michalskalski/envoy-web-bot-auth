@@ -5,6 +5,7 @@ use super::{
     },
     controls::{COALESCED_FAILURE_TTL, Limits, MAX_FAILURE_BACKOFF, WorkControls},
     fetch::{FailureClass, FetchError, FetchErrorKind, FetchRequest, SharedDns, SharedFetcher},
+    metrics::{Metrics, fetch_result},
     ssrf::{DestinationPolicy, validate_all_addresses},
 };
 use http_cache_semantics::BeforeRequest;
@@ -21,6 +22,7 @@ pub(super) struct ResourceLoader {
     cache: CacheStore,
     controls: Arc<WorkControls>,
     max_keys: usize,
+    metrics: Metrics,
 }
 
 impl ResourceLoader {
@@ -29,14 +31,16 @@ impl ResourceLoader {
         http: SharedFetcher,
         destination_policy: DestinationPolicy,
         limits: Limits,
+        metrics: Metrics,
     ) -> Self {
         Self {
             dns,
             http,
             destination_policy,
-            cache: CacheStore::new(limits.state_entries, MAX_FAILURE_BACKOFF),
+            cache: CacheStore::new(limits.state_entries, MAX_FAILURE_BACKOFF, metrics.clone()),
             controls: Arc::new(WorkControls::new(limits.clone())),
             max_keys: limits.max_keys,
+            metrics,
         }
     }
 
@@ -49,6 +53,7 @@ impl ResourceLoader {
         key: ResourceKey,
         previous: Option<Arc<Representation>>,
     ) -> RefreshOutcome {
+        self.metrics.cache_event("refresh");
         let result = self.refresh_inner(&key, previous).await;
         let valid_for = match &result {
             Ok(representation) => {
@@ -120,6 +125,7 @@ impl ResourceLoader {
             None => request.headers().clone(),
         };
         // The refresh leader holds the permit for the whole network request.
+        let fetch_started = Instant::now();
         let response = self
             .http
             .fetch(FetchRequest {
@@ -128,7 +134,19 @@ impl ResourceLoader {
                 headers,
                 selected_ip,
             })
-            .await?;
+            .await;
+        let response = match response {
+            Ok(response) => {
+                self.metrics
+                    .fetch(fetch_result(Ok(())), fetch_started.elapsed());
+                response
+            }
+            Err(error) => {
+                self.metrics
+                    .fetch(fetch_result(Err(error.kind)), fetch_started.elapsed());
+                return Err(error);
+            }
+        };
         let representation =
             representation_from_response(key, request, previous, response, self.max_keys)?;
         self.cache.publish(key, Arc::clone(&representation)).await;
