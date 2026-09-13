@@ -17,8 +17,8 @@ use config::Settings;
 #[cfg(test)]
 use envoy_proxy_dynamic_modules_rust_sdk::EnvoyBuffer;
 use envoy_proxy_dynamic_modules_rust_sdk::{
-    EnvoyCounterVecId, EnvoyHttpFilter, EnvoyHttpFilterConfig, HttpFilter, HttpFilterConfig,
-    declare_init_functions, envoy_log_error, envoy_log_info,
+    EnvoyCounterVecId, EnvoyHistogramVecId, EnvoyHttpFilter, EnvoyHttpFilterConfig, HttpFilter,
+    HttpFilterConfig, declare_init_functions, envoy_log_error, envoy_log_info,
 };
 #[cfg(test)]
 use filter::WebBotAuthFilter;
@@ -75,19 +75,37 @@ where
     };
 
     envoy_log_info!("web-bot-auth configuration accepted");
-    let outcome_counter = envoy_config
-        .define_counter_vec("requests", &["outcome", "reason"])
-        .ok();
+    let outcome_counter = match envoy_config.define_counter_vec("requests", &["outcome", "reason"])
+    {
+        Ok(counter) => Some(counter),
+        Err(error) => {
+            envoy_log_error!("web-bot-auth metric definition failed name=requests error={error:?}");
+            None
+        }
+    };
+    let duration_histogram = match envoy_config
+        .define_histogram_vec("web_bot_auth_duration_us", &["phase", "result"])
+    {
+        Ok(histogram) => Some(histogram),
+        Err(error) => {
+            envoy_log_error!(
+                "web-bot-auth metric definition failed name=web_bot_auth_duration_us error={error:?}"
+            );
+            None
+        }
+    };
 
     Some(Box::new(WebBotAuthConfig {
         settings: Arc::new(settings),
         outcome_counter,
+        duration_histogram,
     }))
 }
 
 struct WebBotAuthConfig {
     settings: Arc<Settings>,
     outcome_counter: Option<EnvoyCounterVecId>,
+    duration_histogram: Option<EnvoyHistogramVecId>,
 }
 
 impl<EHF> HttpFilterConfig<EHF> for WebBotAuthConfig
@@ -98,6 +116,7 @@ where
         filter::wrap(filter::WebBotAuthFilter::new(
             Arc::clone(&self.settings),
             self.outcome_counter,
+            self.duration_histogram,
         ))
     }
 }
@@ -253,6 +272,7 @@ mod tests {
                 ..Settings::default()
             }),
             Some(EnvoyCounterVecId(7)),
+            None,
         );
         assert_eq!(filter.apply_result(&mut envoy, &result), expected_admission);
     }
@@ -602,6 +622,7 @@ mod tests {
                 ..Settings::default()
             }),
             Some(EnvoyCounterVecId(7)),
+            None,
         );
         assert_eq!(
             filter.apply_result(&mut envoy, &verified_result()),

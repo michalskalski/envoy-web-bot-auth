@@ -124,8 +124,8 @@ impl FixtureTransport {
         };
         let mut headers = HeaderMap::new();
         headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(content_type));
-        // Every fixture request revalidates. This makes rotation observable in
-        // one scenario without waiting for a real cache lifetime to elapse.
+        // Every fixture request revalidates so rotation remains observable
+        // without waiting for a cache lifetime to elapse.
         headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-cache"));
         Ok(FetchResponse {
             status: StatusCode::OK,

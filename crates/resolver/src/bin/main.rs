@@ -219,6 +219,7 @@ async fn main() {
 }
 
 async fn serve(args: ServeArgs) -> Result<(), &'static str> {
+    report_metrics_exporter();
     let limits = limits(&args);
     limits.validate()?;
     let destination_policy =
@@ -270,6 +271,7 @@ fn limits(args: &ServeArgs) -> Limits {
 
 #[cfg(feature = "kind-fixtures")]
 async fn serve_fixtures(args: ServeArgs) -> Result<(), &'static str> {
+    report_metrics_exporter();
     let limits = limits(&args);
     limits.validate()?;
     let fixture = FixtureTransport::new();
@@ -291,6 +293,18 @@ async fn serve_fixtures(args: ServeArgs) -> Result<(), &'static str> {
         limits.state_entries,
     );
     serve_app(listen, app).await
+}
+
+fn report_metrics_exporter() {
+    match web_bot_auth_resolver::initialize_metrics_exporter() {
+        web_bot_auth_resolver::MetricsExporterState::Disabled => {}
+        web_bot_auth_resolver::MetricsExporterState::Enabled => {
+            eprintln!("resolver event=metrics_exporter_enabled transport=otlp_grpc");
+        }
+        web_bot_auth_resolver::MetricsExporterState::InvalidEndpoint => {
+            eprintln!("resolver event=metrics_exporter_disabled reason=invalid_endpoint");
+        }
+    }
 }
 
 fn warn_if_network_exposed(listen: &ListenAddress) {

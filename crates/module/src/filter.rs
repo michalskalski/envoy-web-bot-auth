@@ -8,10 +8,11 @@ use crate::policy::{
 use crate::request::{RequestComponents, SignatureHeaderState, classify_signature_headers};
 use crate::verify::{join_response_body, response_status, verify_resolver_response};
 use envoy_proxy_dynamic_modules_rust_sdk::{
-    CatchUnwind, EnvoyBuffer, EnvoyCounterVecId, EnvoyHttpFilter, HttpFilter, abi, envoy_log_error,
+    CatchUnwind, EnvoyBuffer, EnvoyCounterVecId, EnvoyHistogramVecId, EnvoyHttpFilter, HttpFilter,
+    abi, envoy_log_error,
 };
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use web_bot_auth_protocol::{
     MAX_RESOLVE_BODY_BYTES, ResolveRequest, ResolveResponse, ResolverApiVersion,
 };
@@ -20,14 +21,20 @@ pub(crate) struct WebBotAuthFilter {
     settings: Arc<Settings>,
     pending: Option<PendingVerification>,
     outcome_counter: Option<EnvoyCounterVecId>,
+    duration_histogram: Option<EnvoyHistogramVecId>,
 }
 
 impl WebBotAuthFilter {
-    pub(crate) fn new(settings: Arc<Settings>, outcome_counter: Option<EnvoyCounterVecId>) -> Self {
+    pub(crate) fn new(
+        settings: Arc<Settings>,
+        outcome_counter: Option<EnvoyCounterVecId>,
+        duration_histogram: Option<EnvoyHistogramVecId>,
+    ) -> Self {
         Self {
             settings,
             pending: None,
             outcome_counter,
+            duration_histogram,
         }
     }
 
@@ -111,6 +118,20 @@ impl WebBotAuthFilter {
 struct PendingVerification {
     callout_id: u64,
     candidate: VerificationCandidate,
+    callout_started_at: Instant,
+}
+
+fn record_duration<EHF: EnvoyHttpFilter>(
+    envoy_filter: &mut EHF,
+    histogram: Option<EnvoyHistogramVecId>,
+    phase: &'static str,
+    result: &'static str,
+    started_at: Instant,
+) {
+    if let Some(histogram) = histogram {
+        let elapsed_us = u64::try_from(started_at.elapsed().as_micros()).unwrap_or(u64::MAX);
+        let _ = envoy_filter.record_histogram_value_vec(histogram, &[phase, result], elapsed_us);
+    }
 }
 
 impl<EHF> HttpFilter<EHF> for WebBotAuthFilter
@@ -158,9 +179,26 @@ where
                         },
                     );
                 }
+                let capture_started_at = Instant::now();
                 let request = match RequestComponents::try_from_envoy(envoy_filter) {
-                    Ok(request) => request,
+                    Ok(request) => {
+                        record_duration(
+                            envoy_filter,
+                            self.duration_histogram,
+                            "candidate_capture",
+                            "success",
+                            capture_started_at,
+                        );
+                        request
+                    }
                     Err(_) => {
+                        record_duration(
+                            envoy_filter,
+                            self.duration_histogram,
+                            "candidate_capture",
+                            "error",
+                            capture_started_at,
+                        );
                         return self.finish(
                             envoy_filter,
                             VerificationResult::Invalid {
@@ -170,6 +208,7 @@ where
                         );
                     }
                 };
+                let parse_started_at = Instant::now();
                 let candidate = match VerificationCandidate::parse(
                     &request,
                     self.settings.accept_legacy_signature_agent,
@@ -178,9 +217,28 @@ where
                     self.settings.max_signature_lifetime_seconds,
                     self.settings.clock_skew_seconds,
                 ) {
-                    Ok(candidate) => candidate,
-                    Err(error) => return self.finish(envoy_filter, error.result()),
+                    Ok(candidate) => {
+                        record_duration(
+                            envoy_filter,
+                            self.duration_histogram,
+                            "candidate_parse",
+                            "success",
+                            parse_started_at,
+                        );
+                        candidate
+                    }
+                    Err(error) => {
+                        record_duration(
+                            envoy_filter,
+                            self.duration_histogram,
+                            "candidate_parse",
+                            "error",
+                            parse_started_at,
+                        );
+                        return self.finish(envoy_filter, error.result());
+                    }
                 };
+                let send_setup_started_at = Instant::now();
                 let resolver_request = ResolveRequest {
                     api_version: ResolverApiVersion::V1,
                     discovery: candidate.discovery,
@@ -190,6 +248,13 @@ where
                 let body = match serde_json::to_vec(&resolver_request) {
                     Ok(body) => body,
                     Err(_) => {
+                        record_duration(
+                            envoy_filter,
+                            self.duration_histogram,
+                            "resolver_send",
+                            "error",
+                            send_setup_started_at,
+                        );
                         return self.finish(
                             envoy_filter,
                             VerificationResult::Unverified {
@@ -200,6 +265,13 @@ where
                     }
                 };
                 if body.len() > MAX_RESOLVE_BODY_BYTES {
+                    record_duration(
+                        envoy_filter,
+                        self.duration_histogram,
+                        "resolver_send",
+                        "error",
+                        send_setup_started_at,
+                    );
                     return self.finish(
                         envoy_filter,
                         VerificationResult::Invalid {
@@ -215,6 +287,9 @@ where
                     ("content-type", b"application/json"),
                     ("accept", b"application/json"),
                 ];
+                // Start before initiating the callout so wall time covers the resolver operation
+                // as observed by the filter, through its completion callback.
+                let callout_started_at = Instant::now();
                 let (result, callout_id) = envoy_filter.send_http_callout(
                     &self.settings.resolver.cluster,
                     &headers,
@@ -225,6 +300,20 @@ where
                     result,
                     abi::envoy_dynamic_module_type_http_callout_init_result::Success
                 ) {
+                    record_duration(
+                        envoy_filter,
+                        self.duration_histogram,
+                        "resolver_send",
+                        "error",
+                        send_setup_started_at,
+                    );
+                    record_duration(
+                        envoy_filter,
+                        self.duration_histogram,
+                        "resolver_callout",
+                        "error",
+                        callout_started_at,
+                    );
                     return self.finish(
                         envoy_filter,
                         VerificationResult::Unverified {
@@ -233,9 +322,17 @@ where
                         },
                     );
                 }
+                record_duration(
+                    envoy_filter,
+                    self.duration_histogram,
+                    "resolver_send",
+                    "success",
+                    send_setup_started_at,
+                );
                 self.pending = Some(PendingVerification {
                     callout_id,
                     candidate,
+                    callout_started_at,
                 });
                 abi::envoy_dynamic_module_type_on_http_filter_request_headers_status::StopAllIterationAndWatermark
             }
@@ -254,6 +351,13 @@ where
             return;
         };
         if pending.callout_id != callout_id {
+            record_duration(
+                envoy_filter,
+                self.duration_histogram,
+                "resolver_callout",
+                "error",
+                pending.callout_started_at,
+            );
             envoy_log_error!("web-bot-auth reason=resolver_callout_mismatch");
             let result = VerificationResult::Unverified {
                 kind: UnverifiedKind::Unavailable,
@@ -277,7 +381,26 @@ where
                 .ok_or(Reason::ResolverResponse)
         };
 
+        record_duration(
+            envoy_filter,
+            self.duration_histogram,
+            "resolver_callout",
+            if resolver_response.is_ok() {
+                "success"
+            } else {
+                "error"
+            },
+            pending.callout_started_at,
+        );
+        let verify_started_at = Instant::now();
         let result = verify_resolver_response(pending.candidate, resolver_response);
+        record_duration(
+            envoy_filter,
+            self.duration_histogram,
+            "response_verify",
+            result.status(),
+            verify_started_at,
+        );
         match self.apply_result(envoy_filter, &result) {
             Admission::Allow => envoy_filter.continue_decoding(),
             Admission::Reject { .. } => {}

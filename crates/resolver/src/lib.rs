@@ -6,6 +6,7 @@ mod fetch;
 #[cfg(feature = "kind-fixtures")]
 mod fixture;
 mod loader;
+mod metrics;
 mod resource;
 pub mod server;
 mod service;
@@ -18,6 +19,7 @@ pub use fetch::{
 };
 #[cfg(feature = "kind-fixtures")]
 pub use fixture::{FIXTURE_AGENT_URL, FixtureMode, FixtureTransport};
+pub use metrics::{MetricsExporterState, initialize_metrics_exporter};
 pub use service::ResolverService;
 pub use ssrf::DestinationPolicy;
 pub use web_bot_auth_protocol as protocol;

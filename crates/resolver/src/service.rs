@@ -5,10 +5,12 @@ use super::{
     controls::Limits,
     fetch::{DnsResolver, FetchError, FetchErrorKind, HttpFetcher, ResourceKind},
     loader::ResourceLoader,
+    metrics::{Metrics, resolution_result},
     resource::{ParsedResource, ResourceKeyEntry},
     ssrf::DestinationPolicy,
 };
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use web_bot_auth_protocol::{
     DiscoveryMechanism, Ed25519Jwk, MAX_AGENT_URL_BYTES, MAX_KEY_ID_BYTES, ResolveRequest,
@@ -23,6 +25,7 @@ pub struct ResolverService {
     handlers: Arc<Semaphore>,
     limits: Limits,
     allow_test_keys: bool,
+    metrics: Metrics,
 }
 
 impl ResolverService {
@@ -34,11 +37,19 @@ impl ResolverService {
         allow_test_keys: bool,
     ) -> Result<Self, &'static str> {
         limits.validate()?;
+        let metrics = Metrics::new();
         Ok(Self {
-            loader: ResourceLoader::new(dns, http, destination_policy, limits.clone()),
+            loader: ResourceLoader::new(
+                dns,
+                http,
+                destination_policy,
+                limits.clone(),
+                metrics.clone(),
+            ),
             handlers: Arc::new(Semaphore::new(limits.active_handlers)),
             limits,
             allow_test_keys,
+            metrics,
         })
     }
 
@@ -47,6 +58,14 @@ impl ResolverService {
     }
 
     pub async fn resolve(&self, request: ResolveRequest) -> Result<ResolveResponse, FetchError> {
+        let started = Instant::now();
+        let result = self.resolve_timed(request).await;
+        self.metrics
+            .resolution(resolution_result(&result), started.elapsed());
+        result
+    }
+
+    async fn resolve_timed(&self, request: ResolveRequest) -> Result<ResolveResponse, FetchError> {
         let _handler = self.acquire_handler()?;
         tokio::time::timeout(self.limits.resolution_timeout, self.resolve_inner(request))
             .await
