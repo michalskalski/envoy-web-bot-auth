@@ -1,14 +1,13 @@
 //! Fixed-cardinality metrics for resolver request and resource work.
 
 use opentelemetry::{
-    global,
+    KeyValue, global,
     metrics::{Counter, Histogram},
-    KeyValue,
 };
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
-    metrics::{Aggregation, Instrument, PeriodicReader, SdkMeterProvider, Stream},
     Resource,
+    metrics::{Aggregation, Instrument, PeriodicReader, SdkMeterProvider, Stream},
 };
 use std::{env, time::Duration};
 
@@ -180,9 +179,11 @@ mod tests {
     #[test]
     fn resolver_duration_histogram_boundaries_cover_cache_hits_and_deadline() {
         assert_eq!(RESOLVER_DURATION_BUCKETS_SECONDS.first(), Some(&0.000_025));
-        assert!(RESOLVER_DURATION_BUCKETS_SECONDS
-            .windows(2)
-            .all(|pair| pair[0] < pair[1]));
+        assert!(
+            RESOLVER_DURATION_BUCKETS_SECONDS
+                .windows(2)
+                .all(|pair| pair[0] < pair[1])
+        );
         assert!(RESOLVER_DURATION_BUCKETS_SECONDS.contains(&1.8));
         assert!(RESOLVER_DURATION_BUCKETS_SECONDS.len() <= 20);
     }
